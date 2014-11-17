@@ -1,6 +1,7 @@
 <?php
 
 namespace baoforce;
+
 use \baobab\Cache;
 use \baobab\Log;
 use \baobab\Config;
@@ -16,38 +17,20 @@ class ConnectionRest extends Connection {
 
 	private $_version="30.0";
 		
-	public function __construct( $credentials=false ){
-		
+	public function __construct( $credentials ){
+	
 		$this->_sessionLength=5000;
 		
 		if(!$credentials || !is_object($credentials)){
-			$this->_credentials=ConnectionCredentialsList::getDefault();
+			Log::error( "No valid credentials" );
 		} else {
 			$this->_credentials=$credentials;
-		}
-
-		$this->_readCached();
-		if( $this->loginRequired() ) {
-			$this->login();
+			$this->_readCached();
+			if( $this->loginRequired() ) {
+				$this->login();
+			}
 		}
 	}
-
-	/**
-	* Get instance
-	*
-	* @return ConnectionRest
-	*/
-	public static function getInstance( $username = "default") {
-		static $instances=array();
-		
-		if( !$instances || !$instances[ $username ] ) {
-			$instances[ $username ] = new self(
-			  $username == "default" ? false :
-			  ConnectionCredentialsList::get($username) 
-			);
-		}		
-		return $instances[ $username ];
-	}	
 	
 	public function login() {
 	
@@ -72,14 +55,10 @@ class ConnectionRest extends Connection {
 
 		$this->_lastRequestStatus = curl_getinfo($curl, CURLINFO_HTTP_CODE);
 		
-		if( is_object($this->_link) && ! isset($this->_link->error) ) {
-		
+		if( is_object($this->_link) && ! isset($this->_link->error) ) {		
 			$this->_sessionId = $this->_link->access_token;
 			$this->_lastLoggedTime = microtime(true);
-		
-		
-			$this->_link->lastLoggedTime=$this->_lastLoggedTime;
-			
+			$this->_link->lastLoggedTime=$this->_lastLoggedTime;			
 			$this->_writeCached();
 		} else {
 			//Login error
@@ -89,7 +68,6 @@ class ConnectionRest extends Connection {
 		}
 	}
 	
-
 	public function request($url, $content=array(), $customHeader=array() ){
 		$curl = curl_init($url);
 		curl_setopt($curl, CURLOPT_HEADER, false);

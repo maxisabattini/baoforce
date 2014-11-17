@@ -34,31 +34,3 @@ class ConnectionCredentials {
 		self::$_default_user=$user;
 	}	
 }
-
-class ConnectionCredentialsList {
-
-	protected static $_list = array();
-	protected static $_default_username="";
-	
-	public static function add($credential) {
-		self::$_list[ $credential->username ]=$credential;
-	}
-	
-	public static function remove($username) {
-		unset(self::$_list[ $username ]);
-	}
-
-	public static function get($username){
-		return self::$_list[ $username ];
-	}
-	
-	
-	public static function getDefault(){
-		return self::$_list[ self::$_default_username ];
-	}
-
-	public static function setDefaultUsername($username) {
-		self::$_default_username=$username;
-	}
-}
-
