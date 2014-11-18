@@ -4,7 +4,6 @@ namespace baoforce;
 
 use \baobab\Cache;
 use \baobab\Log;
-use \baobab\Config;
 
 require_once "connection.class.php";
 require_once "connection_credentials.class.php";
