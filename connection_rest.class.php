@@ -235,28 +235,27 @@ class ConnectionRest extends Connection {
 	}
 	
 	private function _readCached() {
-
 		$cache = Cache::getInstance();
 		if(!$cache->isEnabled()) {
 			return;
 		}
 
-		$data = $cache->get("ConnectionRest_".$this->_credentials->username );
+		$data = $cache->get("ConnectionRest_".$this->_credentials->username );		
 		if($data){
 			$cached = unserialize($data);
-			if( is_object($cached) && $cached->lastLoggedTime ) {
-				  $this->_link = $cached;
-				  $this->_lastLoggedTime = $cached->lastLoggedTime;
+			if( is_object($cached) && $cached->lastLoggedTime ) {				
+				$this->_sessionId=$cached->access_token;
+				$this->_link = $cached;
+				$this->_lastLoggedTime = $cached->lastLoggedTime;
 			}
 		}
 	}
 	
 	private function _writeCached() {
-
 		$cache = Cache::getInstance();
 		if(!$cache->isEnabled()) {
 			return;
 		}        
-		$cache->set("ConnectionRest_".$this->_credentials->username, $data=serialize($this->_link), 5000 );
+		$cache->set("ConnectionRest_".$this->_credentials->username, $data=serialize($this->_link), $this->_sessionLength );
 	}	
 }
