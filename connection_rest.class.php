@@ -42,7 +42,6 @@ class ConnectionRest extends Connection {
 		;
 
 		Log::info("Login with " . $this->_credentials->username);
-		//Log::debug( debug_backtrace() );
 
 		$curl = curl_init($auth_url);		
 		curl_setopt($curl, CURLOPT_HEADER, false);		
@@ -68,6 +67,20 @@ class ConnectionRest extends Connection {
 	}
 	
 	public function request($url, $content=array(), $customHeader=array() ){
+
+		$result=$this->requestReal($url, $content, $customHeader );
+
+		if( isset( $result["response"]->errorCode ) && $result["response"]->errorCode == "INVALID_SESSION_ID" ) {
+			//Retry login
+			$this->login();
+			$result=$this->requestReal($url, $content, $customHeader );
+		}
+		
+		return $result;
+	}
+
+	protected function requestReal($url, $content=array(), $customHeader=array() ){
+
 		$curl = curl_init($url);
 		curl_setopt($curl, CURLOPT_HEADER, false);
 		curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
