@@ -15,7 +15,9 @@ class ConnectionRest extends Connection {
 	private $_lastRequestStatus;
 
 	private $_version="30.0";
-		
+
+    protected $_sessionLength=10000;
+
 	public function __construct( $credentials ){
 	
 		$this->_sessionLength=5000;
@@ -56,7 +58,10 @@ class ConnectionRest extends Connection {
 		if( is_object($this->_link) && ! isset($this->_link->error) ) {		
 			$this->_sessionId = $this->_link->access_token;
 			$this->_lastLoggedTime = microtime(true);
-			$this->_link->lastLoggedTime=$this->_lastLoggedTime;			
+			$this->_link->lastLoggedTime=$this->_lastLoggedTime;
+
+            Log::info("Login OK " . print_r($this->_link, true));
+
 			$this->_writeCached();
 		} else {
 			//Login error
@@ -70,8 +75,16 @@ class ConnectionRest extends Connection {
 
 		$result=$this->requestReal($url, $content, $customHeader );
 
-		if( isset( $result["response"]->errorCode ) && $result["response"]->errorCode == "INVALID_SESSION_ID" ) {
+		//if( isset( $result["response"]->errorCode ) && $result["response"]->errorCode == "INVALID_SESSION_ID" ) {
+        if( $result["error"] ||
+            (
+                is_array($result["response"])
+                && isset( $result["response"][0] )
+                && isset( $result["response"][0]->errorCode )
+            )
+        ) {
 			//Retry login
+            Log::warn("Retry login ");
 			$this->login();
 			$result=$this->requestReal($url, $content, $customHeader );
 		}
@@ -125,7 +138,10 @@ class ConnectionRest extends Connection {
 			"http_code"	=> $this->_lastRequestStatus,			 
 			"response"	=> json_decode($json_response),
 		);
-		
+
+		Log::warn("requestReal Results ");
+		Log::debug( $result );
+
 		return $result;
 	}
 	
@@ -249,26 +265,34 @@ class ConnectionRest extends Connection {
 	
 	private function _readCached() {
 		$cache = Cache::getInstance();
-		if(!$cache->isEnabled()) {
-			return;
-		}
-
-		$data = $cache->get("ConnectionRest_".$this->_credentials->username );		
-		if($data){
-			$cached = unserialize($data);
-			if( is_object($cached) && $cached->lastLoggedTime ) {				
-				$this->_sessionId=$cached->access_token;
-				$this->_link = $cached;
-				$this->_lastLoggedTime = $cached->lastLoggedTime;
-			}
-		}
+        $data=false;
+		if($cache->isEnabled()) {
+            //Memory cached
+            $data = $cache->get("ConnectionRest_".$this->_credentials->username );
+		} else{
+            //Try to use a file instead
+            $data = file_get_contents("/tmp/ConnectionRest_".$this->_credentials->username);
+        }
+        if($data){
+            $cached = unserialize($data);
+            if( is_object($cached) && $cached->lastLoggedTime ) {
+                $this->_sessionId=$cached->access_token;
+                $this->_link = $cached;
+                $this->_lastLoggedTime = $cached->lastLoggedTime;
+            }
+        }
 	}
 	
 	private function _writeCached() {
 		$cache = Cache::getInstance();
-		if(!$cache->isEnabled()) {
-			return;
-		}        
-		$cache->set("ConnectionRest_".$this->_credentials->username, $data=serialize($this->_link), $this->_sessionLength );
+		if($cache->isEnabled()) {
+            //Memory cached
+            $cache->set("ConnectionRest_".$this->_credentials->username, $data=serialize($this->_link), $this->_sessionLength );
+		} else {
+            //Try to use a file instead
+            file_put_contents("/tmp/ConnectionRest_".$this->_credentials->username, serialize($this->_link));
+        }
+
+        Log::info("_writeCached CALLED");
 	}	
 }
